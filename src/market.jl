@@ -1,11 +1,3 @@
-using
-    Alpaca,
-    CovarianceEstimation,
-    Dates,
-    LinearAlgebra,
-    PortfolioOptimization,
-    Statistics,
-    TradingBase
 
 const TICKERS = [
     "MMM", "AXP", "AAPL", "BA",  "CAT", "CVX", "CSCO",  "KO", "DIS",  #"DOW",
@@ -18,8 +10,8 @@ function get_allocation_dict(api)
     if isempty(positions)
         return Dict{String, Float64}()
     else
-        account_value = sum(x -> parse(Float64, x.market_value), positions)
-        Dict(x.symbol => parse(Float64, x.market_value) / account_value for x in positions)
+        account_value = get_equity(get_account(api))
+        Dict(x.symbol => x.quantity * get_last(api, x.symbol) / account_value for x in positions)
     end
 end
 
@@ -34,9 +26,9 @@ function get_allocation(api, tickers)
     end
 end
 
-function get_historical_returns(tickers, timeframe = Year(1))
-    price_quotes = map(ticker -> ticker => get_historical(ticker, "1y"), tickers)
-    prices = Dict(k => map(x -> x.close, v.quotes) for (k, v) in price_quotes)
+function get_historical_returns(api, tickers, timeframe = Year(1))
+    price_quotes = map(ticker -> ticker => Brokerages.get_historical(api, ticker, 252), tickers)
+    prices = Dict(k => map(x -> x, v) for (k, v) in price_quotes)
     returns = Dict(k => v[1:end-1] ./ v[2:end] .- 1 for (k, v) in prices)
 end
 
@@ -76,20 +68,20 @@ function calculate_λ(return_matrix, ϕ = 1)
 end
 
 function process_trades(api, tickers)
-    return_dict = get_historical_returns(tickers)
+    return_dict = get_historical_returns(api, tickers)
     return_matrix = get_return_matrix(tickers, return_dict)
     λ = calculate_λ(return_matrix)
     allocation_change = determine_allocation_change(api, tickers, return_matrix, RichardRancolli(1-λ, 0, 0, λ))
-    equity = get_account(api).equity
+    equity = get_equity(get_account(api))
     trade_amounts = equity .* allocation_change
-    bars = get_bars(api, tickers, "1Min")
     for (ticker, trade_amount) in zip(tickers, trade_amounts)
-        current_price = bars[ticker][end].c
-        qty = Int(round(abs(trade_amount) / current_price, digits = 0))
+        current_price = Brokerages.get_last(api, ticker)
+        qty = Int(round(trade_amount / current_price, digits = 0))
         if !iszero(qty)
             direction = qty > 0 ? "Buying" : "Selling"
             @info "$direction $ticker: $qty shares"
-            submit_order(api, ticker, qty, MarketOrder())
+            oi = OrderIntent(ticker, MarketOrder(), GTC(), qty)
+            submit_order(api, oi)
         end
     end
 end
