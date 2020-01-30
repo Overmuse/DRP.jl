@@ -28,7 +28,7 @@ end
 
 function get_historical_returns(api, tickers, timeframe = Year(1))
     price_quotes = map(ticker -> ticker => Brokerages.get_historical(api, ticker, 252), tickers)
-    prices = Dict(k => map(x -> x, v) for (k, v) in price_quotes)
+    prices = Dict(k => map(x -> x.close, v) for (k, v) in price_quotes)
     returns = Dict(k => v[1:end-1] ./ v[2:end] .- 1 for (k, v) in prices)
 end
 
