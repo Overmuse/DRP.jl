@@ -11,6 +11,7 @@ LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 Markets = "e289261d-1a32-4d56-985b-5cdfc675b408"
 Polygon = "6c90dff6-b80f-4bd2-aa9c-319c6ebead32"
 PortfolioOptimization = "533b8257-2919-444f-8969-1524e8d0cc7c"
+Simulator = "7a103a07-b92e-4e08-9609-032240f69494"
 Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 TradingBase = "1e56c13b-5444-4379-9737-7aa7ad39eab5"
 

@@ -1,6 +1,6 @@
 module DRP
 
-export process_trades, TICKERS
+export DynamicRiskParity, process_trades, run!
 
 using
     CovarianceEstimation,
@@ -11,6 +11,18 @@ using
     TradingBase,
     Brokerages
 
+using Simulator: AbstractStrategy, run!
+import Simulator:
+    initialize!,
+    should_run,
+    process_preopen!,
+    process_open!,
+    process!,
+    process_close!,
+    process_postclose!,
+    update_statistics!
+
 include("market.jl")
+include("strategy.jl")
 
 end # module

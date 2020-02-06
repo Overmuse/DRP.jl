@@ -1,10 +1,3 @@
-
-const TICKERS = [
-    "MMM", "AXP", "AAPL", "BA",  "CAT", "CVX", "CSCO",  "KO", "DIS",  #"DOW",
-    "XOM",  "GS",  "HD", "IBM", "INTC", "JNJ",  "JPM", "MCD", "MRK", "MSFT",
-    "NKE", "PFE",  "PG", "TRV",  "UTX", "UNH",   "VZ",   "V", "WMT",  "WBA"
-]
-
 function get_allocation_dict(api)
     positions = get_positions(api)
     if isempty(positions)
