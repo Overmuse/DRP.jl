@@ -72,8 +72,7 @@ function process_trades(api, tickers)
         qty = Int(round(trade_amount / current_price, digits = 0))
         if !iszero(qty)
             direction = qty > 0 ? "Buying" : "Selling"
-            @info "$direction $ticker: $qty shares"
-            oi = OrderIntent(ticker, MarketOrder(), GTC(), qty)
+            oi = OrderIntent(ticker, MarketOrder(), OPG(), qty)
             submit_order(api, oi)
         end
     end

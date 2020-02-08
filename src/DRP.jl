@@ -9,7 +9,8 @@ using
     PortfolioOptimization,
     Statistics,
     TradingBase,
-    Brokerages
+    Brokerages,
+    Markets
 
 using Simulator: AbstractStrategy, run!
 import Simulator:
