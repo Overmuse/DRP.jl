@@ -1,15 +1,15 @@
-function get_allocation_dict(api)
-    positions = get_positions(api)
+function get_allocation_dict(b, m)
+    positions = get_positions(b)
     if isempty(positions)
         return Dict{String, Float64}()
     else
-        account_value = get_equity(get_account(api))
-        Dict(x.symbol => x.quantity * get_last(api, x.symbol) / account_value for x in positions)
+        account_value = get_equity(get_account(b))
+        Dict(x.symbol => x.quantity * get_last(m, x.symbol) / account_value for x in positions)
     end
 end
 
-function get_allocation(api, tickers)
-    allocation_dict = get_allocation_dict(api)
+function get_allocation(b, m, tickers)
+    allocation_dict = get_allocation_dict(b, m)
     map(tickers) do ticker
         if ticker in keys(allocation_dict)
             allocation_dict[ticker]
@@ -19,8 +19,8 @@ function get_allocation(api, tickers)
     end
 end
 
-function get_historical_returns(api, tickers, timeframe = Year(1))
-    price_quotes = map(ticker -> ticker => Brokerages.get_historical(api, ticker, 252), tickers)
+function get_historical_returns(m, tickers, timeframe = Year(1))
+    price_quotes = map(ticker -> ticker => get_historical(m, ticker, 252), tickers)
     prices = Dict(k => map(x -> x.close, v) for (k, v) in price_quotes)
     returns = Dict(k => v[1:end-1] ./ v[2:end] .- 1 for (k, v) in prices)
 end
@@ -33,8 +33,8 @@ function calculate_covariance(tickers, return_matrix)
     cov(AnalyticalNonlinearShrinkage(), return_matrix)
 end
 
-function determine_allocation_change(api, tickers, return_matrix, optimization_target)
-    allocation = get_allocation(api, tickers)
+function determine_allocation_change(b, m, tickers, return_matrix, optimization_target)
+    allocation = get_allocation(b, m, tickers)
     Σ = calculate_covariance(tickers, return_matrix)
     target = optimize(optimization_target, Σ)
     target .- allocation
@@ -60,20 +60,20 @@ function calculate_λ(return_matrix, ϕ = 1)
     λ = 1 - ϕ * (csv[1] - σ⁻)/(σ⁺ - σ⁻)
 end
 
-function process_trades(api, tickers)
-    return_dict = get_historical_returns(api, tickers)
+function process_trades(b, m, tickers)
+    return_dict = get_historical_returns(m, tickers)
     return_matrix = get_return_matrix(tickers, return_dict)
     λ = calculate_λ(return_matrix)
-    allocation_change = determine_allocation_change(api, tickers, return_matrix, RichardRancolli(1-λ, 0, 0, λ))
-    equity = get_equity(get_account(api))
+    allocation_change = determine_allocation_change(b, m, tickers, return_matrix, RichardRancolli(1-λ, 0, 0, λ))
+    equity = get_equity(get_account(b))
     trade_amounts = equity .* allocation_change
     for (ticker, trade_amount) in zip(tickers, trade_amounts)
-        current_price = Brokerages.get_last(api, ticker)
+        current_price = get_last(m, ticker)
         qty = Int(round(trade_amount / current_price, digits = 0))
         if !iszero(qty)
             direction = qty > 0 ? "Buying" : "Selling"
-            oi = OrderIntent(ticker, MarketOrder(), OPG(), qty)
-            submit_order(api, oi)
+            oi = OrderIntent(ticker, LimitOrder(current_price), DAY(), qty)
+            submit_order(b, oi)
         end
     end
 end
