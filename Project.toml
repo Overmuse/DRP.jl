@@ -1,7 +1,7 @@
 name = "DRP"
 uuid = "f0efb0c9-631b-4aeb-9b5d-1368bd4052b1"
 authors = ["Sebastian Rollen <sebastian.rollen@betterment.com>"]
-version = "0.2.2"
+version = "0.2.3"
 
 [deps]
 Brokerages = "17266b6e-feb9-49b2-89f6-6dff26db6053"

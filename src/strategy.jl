@@ -17,7 +17,8 @@ function _initialize()
     )
     return (tickers = tickers, statistics = statistics)
 end
-function initialize!(::DynamicRiskParity, b, m::SimulatedMarketDataProvider)
+function initialize!(::DynamicRiskParity, b::SingleAccountBrokerage, m::SimulatedMarketDataProvider)
+    reset!(b)
     warmup!(m, 252)
     _initialize()
 end
@@ -85,9 +86,9 @@ function process_postclose!(::DynamicRiskParity, b, m, params)
     sleep_til_preopen(b, m)
 end
 function finalize!(::DynamicRiskParity, b, m, params)
-    params.statistics["return"] = (get_equity(b) / 1000000.0) - 1
+    params.statistics["return"] = (get_equity(b) / b.account.starting_cash) - 1
     first_date = min(first(b.account.inactive_orders).filled_at, first(b.account.active_orders).filled_at)
-    params.statistics["IRR"] = (get_equity(b) / 1000000.0) ^ (365/convert(Day, get_clock(m) - first_date).value) - 1
+    params.statistics["IRR"] = (get_equity(b) / b.account.starting_cash) ^ (365/convert(Day, get_clock(m) - first_date).value) - 1
     params.statistics["num_trades"] = count(x -> x.status == "filled", b.account.inactive_orders)
     params.statistics["num_orders"] = length(b.account.inactive_orders) + length(b.account.active_orders)
 end
