@@ -1,8 +1,7 @@
 struct DynamicRiskParity{T} <: AbstractStrategy where T
     target::T
 end
-function initialize!(::DynamicRiskParity, b, m)
-    #warmup!(m, 252)
+function _initialize()
     tickers = [
         "MMM", "AXP", "AAPL", "BA",  "CAT", "CVX", "CSCO",  "KO", "DIS",  #"DOW",
         "XOM",  "GS",  "HD", "IBM", "INTC", "JNJ",  "JPM", "MCD", "MRK", "MSFT",
@@ -12,9 +11,18 @@ function initialize!(::DynamicRiskParity, b, m)
         "equity" => Tuple{DateTime, Float64}[],
         "allocation" => Tuple{DateTime, Vector{Float64}}[],
         "IRR" => 0.0,
-        "return" => 0.0
+        "return" => 0.0,
+        "num_trades" => 0,
+        "num_orders" => 0
     )
     return (tickers = tickers, statistics = statistics)
+end
+function initialize!(::DynamicRiskParity, b, m::SimulatedMarketDataProvider)
+    warmup!(m, 252)
+    _initialize()
+end
+function initialize!(::DynamicRiskParity, b, m)
+    _initialize()
 end
 function should_run(::DynamicRiskParity, b, ::LiveMarketDataProvider, params)
     true
@@ -78,7 +86,10 @@ function process_postclose!(::DynamicRiskParity, b, m, params)
 end
 function finalize!(::DynamicRiskParity, b, m, params)
     params.statistics["return"] = (get_equity(b) / 1000000.0) - 1
-    params.statistics["IRR"] = (get_equity(b) / 1000000.0) ^ (365/convert(Day, get_clock(m) - first(b.account.inactive_orders).filled_at).value) - 1
+    first_date = min(first(b.account.inactive_orders).filled_at, first(b.account.active_orders).filled_at)
+    params.statistics["IRR"] = (get_equity(b) / 1000000.0) ^ (365/convert(Day, get_clock(m) - first_date).value) - 1
+    params.statistics["num_trades"] = count(x -> x.status == "filled", b.account.inactive_orders)
+    params.statistics["num_orders"] = length(b.account.inactive_orders) + length(b.account.active_orders)
 end
 function update_statistics!(::DynamicRiskParity, b, m, params)
     push!(params.statistics["equity"], (get_clock(m), get_equity(b)))
