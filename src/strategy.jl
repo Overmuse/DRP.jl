@@ -1,4 +1,6 @@
-struct DynamicRiskParity <: AbstractStrategy end
+struct DynamicRiskParity{T} <: AbstractStrategy where T
+    target::T
+end
 function initialize!(::DynamicRiskParity, b, m)
     #warmup!(m, 252)
     tickers = [
@@ -7,7 +9,10 @@ function initialize!(::DynamicRiskParity, b, m)
         "NKE", "PFE",  "PG", "TRV",  "UTX", "UNH",   "VZ",   "V", "WMT",  "WBA"
     ]
     statistics = Dict(
-        "equity" => Tuple{DateTime, Float64}[]
+        "equity" => Tuple{DateTime, Float64}[],
+        "allocation" => Tuple{DateTime, Vector{Float64}}[],
+        "IRR" => 0.0,
+        "return" => 0.0
     )
     return (tickers = tickers, statistics = statistics)
 end
@@ -53,14 +58,14 @@ function sleep_til_preopen(b, m::LiveMarketDataProvider)
     @info "Sleeping until $sleep_til"
     sleep(sleep_til - now())
 end
-function process_preopen!(::DynamicRiskParity, b, m, params)
-    process_trades(b, m, params.tickers)
+function process_preopen!(x::DynamicRiskParity, b, m, params)
     sleep_til_opening(b, m)
 end
 function process_open!(::DynamicRiskParity, b, m, params)
     sleep_til_open(b, m)
 end
-function process!(::DynamicRiskParity, b, m, params)
+function process!(x::DynamicRiskParity, b, m, params)
+    process_trades(b, m, params.tickers; target = x.target)
     sleep_til_closing(b, m)
 end
 function process_close!(::DynamicRiskParity, b, m, params)
@@ -69,9 +74,13 @@ function process_close!(::DynamicRiskParity, b, m, params)
 end
 function process_postclose!(::DynamicRiskParity, b, m, params)
     @info get_clock(m)
-    push!(params.statistics["equity"], (get_clock(m), get_equity(b)))
     sleep_til_preopen(b, m)
 end
+function finalize!(::DynamicRiskParity, b, m, params)
+    params.statistics["return"] = (get_equity(b) / 1000000.0) - 1
+    params.statistics["IRR"] = (get_equity(b) / 1000000.0) ^ (365/convert(Day, get_clock(m) - first(b.account.inactive_orders).filled_at).value) - 1
+end
 function update_statistics!(::DynamicRiskParity, b, m, params)
-    nothing
+    push!(params.statistics["equity"], (get_clock(m), get_equity(b)))
+    push!(params.statistics["allocation"], (get_clock(m), get_allocation(b, m, params.tickers)))
 end

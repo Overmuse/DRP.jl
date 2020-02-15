@@ -21,6 +21,7 @@ import Simulator:
     process!,
     process_close!,
     process_postclose!,
+    finalize!,
     update_statistics!
 
 include("market.jl")

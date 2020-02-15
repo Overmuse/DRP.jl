@@ -3,7 +3,7 @@ function get_allocation_dict(b, m)
     if isempty(positions)
         return Dict{String, Float64}()
     else
-        account_value = get_equity(get_account(b))
+        account_value = get_equity(b)
         Dict(x.symbol => x.quantity * get_last(m, x.symbol) / account_value for x in positions)
     end
 end
@@ -60,20 +60,19 @@ function calculate_λ(return_matrix, ϕ = 1)
     λ = 1 - ϕ * (csv[1] - σ⁻)/(σ⁺ - σ⁻)
 end
 
-function process_trades(b, m, tickers)
+function process_trades(b, m, tickers; target = λ -> RichardRancolli(1-λ, 0, 0, λ))
     return_dict = get_historical_returns(m, tickers)
     return_matrix = get_return_matrix(tickers, return_dict)
     λ = calculate_λ(return_matrix)
-    allocation_change = determine_allocation_change(b, m, tickers, return_matrix, RichardRancolli(1-λ, 0, 0, λ))
-    equity = get_equity(get_account(b))
+    allocation_change = determine_allocation_change(b, m, tickers, return_matrix, target(λ))
+    equity = get_equity(b)
     trade_amounts = equity .* allocation_change
     for (ticker, trade_amount) in zip(tickers, trade_amounts)
         current_price = get_last(m, ticker)
         qty = Int(round(trade_amount / current_price, digits = 0))
         if !iszero(qty)
             direction = qty > 0 ? "Buying" : "Selling"
-            oi = OrderIntent(ticker, LimitOrder(current_price), DAY(), qty)
-            submit_order(b, oi)
+            submit_order(b, ticker, qty, LimitOrder(current_price), duration = DAY())
         end
     end
 end
