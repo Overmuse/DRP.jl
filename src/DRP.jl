@@ -22,7 +22,12 @@ import Simulator:
     process_close!,
     process_postclose!,
     finalize!,
-    update_statistics!
+    update_statistics!,
+    sleep_til_preopen,
+    sleep_til_opening,
+    sleep_til_open,
+    sleep_til_closing,
+    sleep_til_close
 
 include("market.jl")
 include("strategy.jl")
