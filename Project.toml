@@ -16,5 +16,6 @@ Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 TradingBase = "1e56c13b-5444-4379-9737-7aa7ad39eab5"
 
 [compat]
+Brokerages = "0.3"
 CovarianceEstimation = "0.2"
 Markets = "0.6"
