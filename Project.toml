@@ -15,3 +15,4 @@ TradingBase = "1e56c13b-5444-4379-9737-7aa7ad39eab5"
 
 [compat]
 CovarianceEstimation = "0.2"
+Markets = "0.6"
