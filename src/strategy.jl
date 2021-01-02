@@ -41,14 +41,21 @@ process_close!(::DynamicRiskParity, b, m, params) = nothing
 function process_postclose!(::DynamicRiskParity, b, m, params)
     @info get_clock(m)
 end
+function _calculate_irr(b, m)
+    orders = vcat(b.account.inactive_orders, b.account.active_orders)
+    first_date = mapreduce(x -> x.filled_at, min, orders)
+    (get_equity(b) / b.account.starting_cash) ^ (365/convert(Day, get_clock(m) - first_date).value) - 1
+end
+
 function finalize!(::DynamicRiskParity, b, m, params)
     params.statistics["return"] = (get_equity(b) / b.account.starting_cash) - 1
-    first_date = min(first(b.account.inactive_orders).filled_at, first(b.account.active_orders).filled_at)
-    params.statistics["IRR"] = (get_equity(b) / b.account.starting_cash) ^ (365/convert(Day, get_clock(m) - first_date).value) - 1
+    params.statistics["IRR"] = _calculate_irr(b, m)
     params.statistics["num_trades"] = count(x -> x.status == "filled", b.account.inactive_orders)
     params.statistics["num_orders"] = length(b.account.inactive_orders) + length(b.account.active_orders)
 end
 function update_statistics!(::DynamicRiskParity, b, m, params)
-    push!(params.statistics["equity"], (get_clock(m), get_equity(b)))
-    push!(params.statistics["allocation"], (get_clock(m), get_allocation(b, m, params.tickers)))
+    if is_closed(m)
+        push!(params.statistics["equity"], (get_clock(m), get_equity(b)))
+        push!(params.statistics["allocation"], (get_clock(m), get_allocation(b, m, params.tickers)))
+    end
 end
